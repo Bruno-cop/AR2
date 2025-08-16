@@ -1,0 +1,163 @@
+--[[
+           Script Aimbot e ESP com Rayfield UI (Versão 5.8 - Distância Veículos)
+
+    CRÉDITOS:
+    - Script Base: @keven_xz
+
+    ALTERAÇÕES NESTA VERSÃO:
+    - DISTÂNCIA DO ESP DE VEÍCULOS: Adicionado um slider na aba "Misc" para configurar
+      a distância máxima de renderização dos veículos.
+]]
+
+-- =================================================================================
+-- CARREGAMENTO DA BIBLIOTECA RAYFIELD E CONFIGURAÇÃO DA UI
+-- =================================================================================
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = Rayfield:CreateWindow({
+   Name = "Mod Menu por @keven_xz",
+   LoadingTitle = "A carregar Script...",
+   LoadingSubtitle = "Feito por @keven_xz",
+   ShowText = "Menu",
+   Theme = "DarkBlue",
+   ToggleUIKeybind = "K",
+   ConfigurationSaving = { Enabled = true, FolderName = "ModConfigs", FileName = "AimbotESPConfig_v5" },
+})
+local Players = game:GetService("Players"); local RunService = game:GetService("RunService"); local UserInputService = game:GetService("UserInputService"); local Workspace = game:GetService("Workspace"); local GuiService = game:GetService("GuiService"); local LocalPlayer = Players.LocalPlayer; local PlayerGui = LocalPlayer:WaitForChild("PlayerGui"); local Camera = Workspace.CurrentCamera
+local Drawing_Container = Instance.new("ScreenGui"); Drawing_Container.Name = "Drawing_Container_Global"; Drawing_Container.DisplayOrder = 999; Drawing_Container.ResetOnSpawn = false; Drawing_Container.Parent = PlayerGui
+
+-- =================================================================================
+-- VARIÁVEIS DE CONFIGURAÇÃO
+-- =================================================================================
+local AimAssistEnabled = true; local FieldOfView = 150; local TargetPartName = "Head"; local RequireLineOfSight = false; local Smoothness = 1; local PredictionAmount = 0.12; local TeamCheckEnabled = true; local FOV_Circle_Enabled = true
+local FOV_Circle_Color = Color3.fromRGB(255, 255, 255)
+local Aimbot_MaxDistance = 300
+local ESP_Enabled = true; local Box_Enabled = true; local Skeleton_Enabled = true; local Name_Enabled = true; local InfoBar_Enabled = true; local Tracer_Enabled = false
+local ESP_MaxDistance = 5000
+local ESP_Color = Color3.fromRGB(0, 255, 255); local Skeleton_Color = Color3.fromRGB(255, 170, 0); local Text_Color = Color3.fromRGB(255, 255, 255)
+local VehicleESP_Enabled = true
+local VehicleESP_Color = Color3.fromRGB(0, 255, 0)
+local VehicleESP_MaxDistance = 2000 -- !NOVO!
+
+-- =================================================================================
+-- CRIAÇÃO DOS ELEMENTOS DO MENU
+-- =================================================================================
+local AimbotTab = Window:CreateTab("Aimbot", "crosshair")
+AimbotTab:CreateLabel("Aimbot ativado com: Botão Direito do Rato")
+AimbotTab:CreateToggle({Name = "Ativar Aimbot", CurrentValue = AimAssistEnabled, Flag = "AimbotEnabledFlag_v5", Callback = function(Value) AimAssistEnabled = Value end,})
+AimbotTab:CreateSlider({ Name = "Campo de Visão (FOV)", Range = {10, 500}, Increment = 10, Suffix = "px", CurrentValue = FieldOfView, Flag = "AimbotFOVFlag_v5", Callback = function(Value) FieldOfView = Value end,})
+AimbotTab:CreateSlider({ Name = "Distância Máxima do Aimbot", Range = {10, 1000}, Increment = 10, Suffix = "m", CurrentValue = Aimbot_MaxDistance, Flag = "AimbotMaxDistance_v5", Callback = function(Value) Aimbot_MaxDistance = Value end,})
+AimbotTab:CreateSlider({ Name = "Suavidade da Mira", Range = {0.1, 1}, Increment = 0.1, Suffix = "", CurrentValue = Smoothness, Flag = "AimbotSmoothnessFlag_v5", Callback = function(Value) Smoothness = Value end,})
+AimbotTab:CreateDropdown({ Name = "Parte do Corpo Alvo", Options = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"}, CurrentOption = {"Head"}, MultipleOptions = false, Flag = "AimbotTargetPartFlag_v5", Callback = function(Options) TargetPartName = Options[1] end,})
+AimbotTab:CreateToggle({ Name = "Verificar Time (Inimigos)", CurrentValue = TeamCheckEnabled, Flag = "AimbotTeamCheck_v5", Callback = function(Value) TeamCheckEnabled = Value end,})
+AimbotTab:CreateToggle({ Name = "Desenhar Círculo de FOV", CurrentValue = FOV_Circle_Enabled, Flag = "AimbotDrawFOV_v5", Callback = function(Value) FOV_Circle_Enabled = Value end,})
+AimbotTab:CreateColorPicker({ Name = "Cor do Círculo de FOV", Color = FOV_Circle_Color, Flag = "FOVCircleColor_v5", Callback = function(Value) FOV_Circle_Color = Value end })
+
+local ESPTab = Window:CreateTab("ESP", "eye")
+ESPTab:CreateToggle({ Name = "Ativar ESP", CurrentValue = ESP_Enabled, Flag = "ESPEnabledFlag_v5", Callback = function(Value) ESP_Enabled = Value; end,})
+ESPTab:CreateSlider({ Name = "Distância Máxima do ESP", Range = {50, 5000}, Increment = 10, Suffix = "m", CurrentValue = ESP_MaxDistance, Flag = "ESPMaxDistance_v5", Callback = function(Value) ESP_MaxDistance = Value end,})
+ESPTab:CreateToggle({ Name = "Mostrar Caixas (Box)", CurrentValue = Box_Enabled, Flag = "ESPBoxFlag_v5", Callback = function(Value) Box_Enabled = Value end, })
+ESPTab:CreateToggle({ Name = "Mostrar Esqueleto", CurrentValue = Skeleton_Enabled, Flag = "ESPSkeletonFlag_v5", Callback = function(Value) Skeleton_Enabled = Value end, })
+ESPTab:CreateToggle({ Name = "Mostrar Nomes", CurrentValue = Name_Enabled, Flag = "ESPNameFlag_v5", Callback = function(Value) Name_Enabled = Value end, })
+ESPTab:CreateToggle({ Name = "Mostrar Barra de Informação", CurrentValue = InfoBar_Enabled, Flag = "ESPInfoBarFlag_v5", Callback = function(Value) InfoBar_Enabled = Value end, })
+ESPTab:CreateToggle({ Name = "Mostrar Linha de Mira (Tracer)", CurrentValue = Tracer_Enabled, Flag = "ESPTracerFlag_v5", Callback = function(Value) Tracer_Enabled = Value end, })
+ESPTab:CreateColorPicker({ Name = "Cor da Caixa e Tracer", Color = ESP_Color, Flag = "ESPColorFlag_v5", Callback = function(Value) ESP_Color = Value end })
+ESPTab:CreateColorPicker({ Name = "Cor do Esqueleto", Color = Skeleton_Color, Flag = "ESPSkeletonColorFlag_v5", Callback = function(Value) Skeleton_Color = Value end })
+ESPTab:CreateColorPicker({ Name = "Cor do Texto (Nome/Info)", Color = Text_Color, Flag = "ESPTextColorFlag_v5", Callback = function(Value) Text_Color = Value end })
+
+local MiscTab = Window:CreateTab("Misc", "alert-triangle")
+MiscTab:CreateToggle({ Name = "Ativar ESP de Veículos", CurrentValue = VehicleESP_Enabled, Flag = "VehicleESPEnabled_v5", Callback = function(Value) VehicleESP_Enabled = Value end,})
+-- !NOVO! -> Slider de distância para o ESP de Veículos
+MiscTab:CreateSlider({ Name = "Distância Máxima (Veículos)", Range = {100, 10000}, Increment = 100, Suffix = "m", CurrentValue = VehicleESP_MaxDistance, Flag = "VehicleESPMaxDistance_v5", Callback = function(Value) VehicleESP_MaxDistance = Value end,})
+MiscTab:CreateColorPicker({ Name = "Cor do ESP de Veículos", Color = VehicleESP_Color, Flag = "VehicleESPColor_v5", Callback = function(Value) VehicleESP_Color = Value end,})
+
+-- =================================================================================
+-- LÓGICA DO SCRIPT
+-- =================================================================================
+local FOV_Circle = Drawing.new("Circle"); FOV_Circle.Visible = false; FOV_Circle.Thickness = 1; FOV_Circle.NumSides = 64; FOV_Circle.Filled = false
+local function GetClosestTarget() if not AimAssistEnabled or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return nil end; local closestTarget = nil; local shortestDistance = FieldOfView; local localPos = LocalPlayer.Character.HumanoidRootPart.Position; local raycastParams = RaycastParams.new(); raycastParams.FilterType = Enum.RaycastFilterType.Blacklist; raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}; for _, player in ipairs(Players:GetPlayers()) do if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then local humanoid = player.Character:FindFirstChild("Humanoid"); local targetPart = player.Character:FindFirstChild(TargetPartName); if targetPart and humanoid and humanoid.Health > 0 then local distance = (localPos - targetPart.Position).Magnitude; if distance <= Aimbot_MaxDistance then if (not TeamCheckEnabled or not player.Team or player.Team ~= LocalPlayer.Team) then local screenPoint, onScreen = Camera:WorldToViewportPoint(targetPart.Position); if onScreen then local mousePosition = UserInputService:GetMouseLocation(); local targetPosition = Vector2.new(screenPoint.X, screenPoint.Y); local fovDistance = (mousePosition - targetPosition).Magnitude; if fovDistance < shortestDistance then if RequireLineOfSight then local origin = Camera.CFrame.Position; local direction = (targetPart.Position - origin).Unit * 1000; local result = Workspace:Raycast(origin, direction, raycastParams); if result and result.Instance:IsDescendantOf(player.Character) then shortestDistance = fovDistance; closestTarget = targetPart; end; else shortestDistance = fovDistance; closestTarget = targetPart; end; end; end; end; end; end; end; end; return closestTarget; end
+local linePool = {}; local function GetLine() if #linePool > 0 then local line = table.remove(linePool); line.Visible = true; return line; end; local line = Instance.new("Frame"); line.AnchorPoint = Vector2.new(0.5, 0.5); line.BorderSizePixel = 0; line.Parent = Drawing_Container; return line; end
+local function ReturnLine(line) line.Visible = false; table.insert(linePool, line); end; local usedLines = {}
+local function DrawLine(startVec, endVec, color, thickness) local distance = (startVec - endVec).Magnitude; local center = (startVec + endVec) / 2; local angle = math.atan2(endVec.Y - startVec.Y, endVec.X - startVec.X); local line = GetLine(); line.Size = UDim2.new(0, distance, 0, thickness); line.Position = UDim2.fromOffset(center.X, center.Y); line.Rotation = math.deg(angle); line.BackgroundColor3 = color; table.insert(usedLines, line); end
+local skeletonBones = {{"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"}, {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"}, {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightUpperArm", "RightHand"}, {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"}, {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightUpperLeg", "RightFoot"}}
+local playerLabels = {}; local function GetPlayerLabel(player) if playerLabels[player] then return playerLabels[player].name, playerLabels[player].info end; local nameLabel = Instance.new("TextLabel"); nameLabel.TextSize = 14; nameLabel.Font = Enum.Font.SourceSansBold; nameLabel.TextColor3 = Text_Color; nameLabel.BackgroundTransparency = 1; nameLabel.TextStrokeTransparency = 0; nameLabel.AnchorPoint = Vector2.new(0.5, 1); nameLabel.Parent = Drawing_Container; local infoLabel = Instance.new("TextLabel"); infoLabel.TextSize = 12; infoLabel.Font = Enum.Font.SourceSansSemibold; infoLabel.TextColor3 = Text_Color; infoLabel.BackgroundTransparency = 1; infoLabel.TextStrokeTransparency = 0; infoLabel.AnchorPoint = Vector2.new(0.5, 0); infoLabel.Parent = Drawing_Container; playerLabels[player] = {name = nameLabel, info = infoLabel}; return nameLabel, infoLabel; end
+local vehicleLabels = {}; local function GetVehicleLabel(vehicle) if vehicleLabels[vehicle] then return vehicleLabels[vehicle] end; local newLabel = Instance.new("TextLabel"); newLabel.TextSize = 14; newLabel.Font = Enum.Font.SourceSansBold; newLabel.BackgroundTransparency = 1; newLabel.TextStrokeTransparency = 0; newLabel.AnchorPoint = Vector2.new(0.5, 0); newLabel.Parent = Drawing_Container; vehicleLabels[vehicle] = newLabel; return newLabel; end
+
+local AimbotConnection, ESPConnection, VehicleESPConnection
+AimbotConnection = RunService.RenderStepped:Connect(function()
+    pcall(function()
+        if AimAssistEnabled and FOV_Circle_Enabled then
+            FOV_Circle.Visible = true; FOV_Circle.Color = FOV_Circle_Color; FOV_Circle.Radius = FieldOfView; FOV_Circle.Position = UserInputService:GetMouseLocation()
+        else
+            FOV_Circle.Visible = false
+        end
+        if AimAssistEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+            local target = GetClosestTarget()
+            if target then
+                local targetVelocity = target.AssemblyLinearVelocity; local predictedPosition = target.Position + (targetVelocity * PredictionAmount); local screenPoint, onScreen = Camera:WorldToViewportPoint(predictedPosition)
+                if onScreen then
+                    local targetVector = Vector2.new(screenPoint.X, screenPoint.Y); local mouseDelta = targetVector - UserInputService:GetMouseLocation()
+                    mousemoverel(mouseDelta.X * Smoothness, mouseDelta.Y * Smoothness)
+                end
+            end
+        end
+    end)
+end)
+
+ESPConnection = RunService.RenderStepped:Connect(function()
+    if not ESP_Enabled or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then Drawing_Container.Enabled = false; return end
+    Drawing_Container.Enabled = true
+    for _, line in ipairs(usedLines) do ReturnLine(line) end; usedLines = {}
+    for _, labelGroup in pairs(playerLabels) do labelGroup.name.Visible = false; labelGroup.info.Visible = false; end
+    local guiInset = GuiService:GetGuiInset(); local localPos = LocalPlayer.Character.HumanoidRootPart.Position
+    for _, player in ipairs(Players:GetPlayers()) do
+        pcall(function()
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+                local distance = math.floor((localPos - player.Character.HumanoidRootPart.Position).Magnitude)
+                if distance <= ESP_MaxDistance then
+                    local char = player.Character; local cframe, size = char:GetBoundingBox(); local corners = {cframe * Vector3.new(size.X/2, size.Y/2, size.Z/2), cframe * Vector3.new(size.X/2, size.Y/2, -size.Z/2), cframe * Vector3.new(size.X/2, -size.Y/2, size.Z/2), cframe * Vector3.new(size.X/2, -size.Y/2, -size.Z/2), cframe * Vector3.new(-size.X/2, size.Y/2, size.Z/2), cframe * Vector3.new(-size.X/2, size.Y/2, -size.Z/2), cframe * Vector3.new(-size.X/2, -size.Y/2, size.Z/2), cframe * Vector3.new(-size.X/2, -size.Y/2, -size.Z/2)}
+                    local minX, minY, maxX, maxY = math.huge, math.huge, -math.huge, -math.huge; local onScreen = false
+                    for _, corner in ipairs(corners) do local pos, visible = Camera:WorldToViewportPoint(corner) if visible then onScreen = true; minX = math.min(minX, pos.X); minY = math.min(minY, pos.Y); maxX = math.max(maxX, pos.X); maxY = math.max(maxY, pos.Y) end end
+                    if onScreen then
+                        local boxTopLeft = Vector2.new(minX, minY - guiInset.Y); local boxBottomRight = Vector2.new(maxX, maxY - guiInset.Y); local boxSize = boxBottomRight - boxTopLeft
+                        if Box_Enabled then DrawLine(boxTopLeft, Vector2.new(boxBottomRight.X, boxTopLeft.Y), ESP_Color, 1.5); DrawLine(boxTopLeft, Vector2.new(boxTopLeft.X, boxBottomRight.Y), ESP_Color, 1.5); DrawLine(boxBottomRight, Vector2.new(boxTopLeft.X, boxBottomRight.Y), ESP_Color, 1.5); DrawLine(boxBottomRight, Vector2.new(boxBottomRight.X, boxTopLeft.Y), ESP_Color, 1.5) end
+                        if Skeleton_Enabled then for _, bone in ipairs(skeletonBones) do local p1 = char:FindFirstChild(bone[1]); local p2 = char:FindFirstChild(bone[2]) if p1 and p2 then local pos1, vis1 = Camera:WorldToViewportPoint(p1.Position); local pos2, vis2 = Camera:WorldToViewportPoint(p2.Position) if vis1 and vis2 then local adjustedPos1 = Vector2.new(pos1.X, pos1.Y - guiInset.Y); local adjustedPos2 = Vector2.new(pos2.X, pos2.Y - guiInset.Y); DrawLine(adjustedPos1, adjustedPos2, Skeleton_Color, 1) end end end end
+                        local nameLabel, infoLabel = GetPlayerLabel(player); nameLabel.TextColor3 = Text_Color; infoLabel.TextColor3 = Text_Color
+                        if Name_Enabled then nameLabel.Text = player.Name; nameLabel.Position = UDim2.fromOffset(boxTopLeft.X + boxSize.X / 2, boxTopLeft.Y - 2); nameLabel.Visible = true end
+                        if InfoBar_Enabled then local health = math.floor((char.Humanoid.Health / char.Humanoid.MaxHealth) * 100); infoLabel.Text = string.format("[ %dm ] [ %d%% ]", distance, health); infoLabel.Position = UDim2.fromOffset(boxTopLeft.X + boxSize.X / 2, boxTopLeft.Y + boxSize.Y + 2); infoLabel.Visible = true end
+                        if Tracer_Enabled then local tracerStart = Vector2.new(Camera.ViewportSize.X / 2, 0); local tracerEnd = Vector2.new(boxTopLeft.X + boxSize.X / 2, boxTopLeft.Y); DrawLine(tracerStart, tracerEnd, ESP_Color, 1) end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+VehicleESPConnection = RunService.RenderStepped:Connect(function()
+    if not VehicleESP_Enabled or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+    local vehiclesFolder = Workspace:FindFirstChild("Vehicles"); if not vehiclesFolder then return end
+    local localPos = LocalPlayer.Character.HumanoidRootPart.Position
+    for _, label in pairs(vehicleLabels) do label.Visible = false end
+    for _, vehicle in ipairs(vehiclesFolder:GetChildren()) do
+        pcall(function()
+            if vehicle:IsA("Model") and vehicle.PrimaryPart then
+                local distance = math.floor((localPos - vehicle.PrimaryPart.Position).Magnitude)
+                -- !ATUALIZADO! Verificação da distância máxima
+                if distance <= VehicleESP_MaxDistance then
+                    local screenPoint, onScreen = Camera:WorldToViewportPoint(vehicle.PrimaryPart.Position)
+                    if onScreen then
+                        local label = GetVehicleLabel(vehicle)
+                        label.Visible = true; label.TextColor3 = VehicleESP_Color; label.Text = vehicle.Name .. "\n[" .. distance .. "m]"; label.Position = UDim2.fromOffset(screenPoint.X, screenPoint.Y)
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+MiscTab:CreateButton({ Name = "Panic (Encerrar Script)", Callback = function() if AimbotConnection then AimbotConnection:Disconnect() end; if ESPConnection then ESPConnection:Disconnect() end; if VehicleESPConnection then VehicleESPConnection:Disconnect() end; if FOV_Circle then FOV_Circle.Visible = false; FOV_Circle = nil end; if Drawing_Container then Drawing_Container:Destroy() end; Rayfield:Destroy() end,})
+
+-- =================================================================================
+-- CARREGAMENTO DAS CONFIGURAÇÕES
+-- =================================================================================
+Rayfield:LoadConfiguration()
+print("Parceiro de Programacao: Script por @keven_xz (v5.8 - Final) carregado com sucesso!")
